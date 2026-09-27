@@ -1,7 +1,7 @@
 !=====================================================================
-! MAIN PROGRAM
+! MAIN PROGRAM: TOV solver in the enthalpy formalism
 !=====================================================================
-program tov2019
+program tov2019_h
   use constants
   implicit none
 
@@ -15,7 +15,7 @@ program tov2019
   character(len=30) :: eos_file
 
   ! +++ Parameters +++
-  eos_file  = 'eos_MDI_x0.0.in' ! EOS  
+  eos_file  = 'eos_MDI_x0.0.in' ! EOS
   rho_start = 0.09d0            ! Starting density
   rho_end   = 1.5d0             ! Ending density
   nsteps    = 100               ! Number of density steps
@@ -31,8 +31,8 @@ program tov2019
   ! +++ Loop over central density +++
   do i = 1, nsteps
     rhoc = rho_tmp * fm3cm3
-    call solve_tov(eos_file, rhoc)
+    call solve_tov_h(eos_file, rhoc)
     rho_tmp = rho_tmp + rho_h
   enddo
 
-end program tov2019
+end program tov2019_h

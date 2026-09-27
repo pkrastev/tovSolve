@@ -189,10 +189,10 @@ and *c*<sub>s</sub><sup>2</sup> = d*P*/d*ε* the adiabatic sound speed squared a
 
 ### Stellar structure (TOV)
 
-$$
+```math
 \frac{dm}{dr} = 4\pi r^2 \varepsilon, \qquad
 \frac{dP}{dr} = -\frac{(\varepsilon + P)\,(m + 4\pi r^3 P)}{r\,(r - 2m)} .
-$$
+```
 
 The surface *R* is where the pressure falls to the termination pressure *P*<sub>term</sub>, the second row
 of the EOS table. The gravitational mass is *M* = *m*(*R*).
@@ -203,25 +203,29 @@ The quadrupolar (*l* = 2) static tidal perturbation is described by *y* = *r H*�
 [[M2]](#methods)). It obeys a Riccati equation that is integrated alongside the TOV equations from
 *y*(0) = 2:
 
-$$
+```math
 r\frac{dy}{dr} = -y^2 - y\,F(r) - r^2 Q(r),
-$$
+```
 
-$$
-F = \frac{1 - 4\pi r^2(\varepsilon - P)}{1 - 2m/r}, \qquad
-Q = \frac{4\pi\left[5\varepsilon + 9P + (\varepsilon + P)/c_s^2\right]}{1 - 2m/r}
-  - \frac{6}{r^2(1 - 2m/r)}
-  - \frac{4m^2}{r^4}\,\frac{\left(1 + 4\pi r^3 P/m\right)^2}{(1 - 2m/r)^2} .
-$$
+```math
+\begin{aligned}
+F &= \frac{1 - 4\pi r^2(\varepsilon - P)}{1 - 2m/r}, \\
+Q &= \frac{4\pi\left[5\varepsilon + 9P + (\varepsilon + P)/c_s^2\right]}{1 - 2m/r}
+   - \frac{6}{r^2(1 - 2m/r)}
+   - \frac{4m^2}{r^4}\,\frac{\left(1 + 4\pi r^3 P/m\right)^2}{(1 - 2m/r)^2} .
+\end{aligned}
+```
 
 With *y*<sub>R</sub> = *y*(*R*) and the compactness *β* = *M*/*R*,
 
-$$
-k_2 = \frac{8}{5}\,\beta^5 (1-2\beta)^2 \left[2 - y_R + 2\beta(y_R - 1)\right]
-\Big\{ 2\beta\left[6 - 3y_R + 3\beta(5y_R - 8)\right]
-+ 4\beta^3\left[13 - 11y_R + \beta(3y_R - 2) + 2\beta^2(1 + y_R)\right]
-+ 3(1-2\beta)^2\left[2 - y_R + 2\beta(y_R - 1)\right]\ln(1 - 2\beta) \Big\}^{-1},
-$$
+```math
+\begin{aligned}
+k_2 &= \frac{8}{5}\,\frac{\beta^5 (1-2\beta)^2 \left[2 - y_R + 2\beta(y_R - 1)\right]}{D}, \\
+D &= 2\beta\left[6 - 3y_R + 3\beta(5y_R - 8)\right] \\
+  &\quad {}+ 4\beta^3\left[13 - 11y_R + \beta(3y_R - 2) + 2\beta^2(1 + y_R)\right] \\
+  &\quad {}+ 3(1-2\beta)^2\left[2 - y_R + 2\beta(y_R - 1)\right]\ln(1 - 2\beta) ,
+\end{aligned}
+```
 
 and *λ* = (2/3) *k*<sub>2</sub> *R*<sup>5</sup>, Λ = (2/3) *k*<sub>2</sub> *β*<sup>−5</sup>.
 
@@ -230,11 +234,11 @@ and *λ* = (2/3) *k*<sub>2</sub> *R*<sup>5</sup>, Λ = (2/3) *k*<sub>2</sub> *β
 In the slow-rotation approximation (Hartle 1967 [[M3]](#methods)), the frame-dragging function
 *f* = d ln *ω̄* / d ln *r* satisfies (Lim, Holt & Stahulak 2019 [[M4]](#methods))
 
-$$
+```math
 \frac{df}{dr} = -\frac{f}{r}\,(f + 3) + \frac{(4 + f)\,4\pi r^2 (\varepsilon + P)}{r - 2m},
 \qquad
 I = \frac{R^3 f_R}{6 + 2 f_R},
-$$
+```
 
 with *f* ≈ (16π/5)(*ε*<sub>c</sub> + *P*<sub>c</sub>) *r*<sup>2</sup> near the centre.
 
@@ -242,27 +246,28 @@ with *f* ≈ (16π/5)(*ε*<sub>c</sub> + *P*<sub>c</sub>) *r*<sup>2</sup> near t
 
 The pseudo-enthalpy (Lindblom 1992 [[M1]](#methods))
 
-$$
+```math
 h(P) = \int_{P_\mathrm{term}}^{P} \frac{dP'}{\varepsilon(P') + P'}
-$$
+```
 
 is 0 at the surface and *h*<sub>c</sub> at the centre. With *h* as the independent variable the system becomes
 
-$$
+```math
 \frac{dr}{dh} = -\frac{r\,(r - 2m)}{m + 4\pi r^3 P}, \qquad
 \frac{dm}{dh} = 4\pi r^2 \varepsilon\,\frac{dr}{dh}, \qquad
 \frac{dP}{dh} = \varepsilon + P,
-$$
+```
 
 and *y* and *f* follow from the chain rule, d/d*h* = (d*r*/d*h*) d/d*r*. The integration starts just off the
 centre, at *h*<sub>0</sub> = *h*<sub>c</sub>(1 − 10<sup>−7</sup>), from Lindblom's series expansion:
 
-$$
-r(h) \simeq \sqrt{\frac{3(h_c - h)}{2\pi(\varepsilon_c + 3P_c)}}
-\left[1 - \frac{\varepsilon_c - 3P_c - \tfrac{3}{5}\varepsilon_1}{4(\varepsilon_c + 3P_c)}\,(h_c - h)\right],
-\qquad
-m(h) \simeq \frac{4\pi}{3}\varepsilon_c r^3 \left[1 - \frac{3\varepsilon_1}{5\varepsilon_c}(h_c - h)\right],
-$$
+```math
+\begin{aligned}
+r(h) &\simeq \sqrt{\frac{3(h_c - h)}{2\pi(\varepsilon_c + 3P_c)}}
+  \left[1 - \frac{\varepsilon_c - 3P_c - \tfrac{3}{5}\varepsilon_1}{4(\varepsilon_c + 3P_c)}\,(h_c - h)\right], \\
+m(h) &\simeq \frac{4\pi}{3}\,\varepsilon_c r^3 \left[1 - \frac{3\varepsilon_1}{5\varepsilon_c}\,(h_c - h)\right],
+\end{aligned}
+```
 
 where *ε*<sub>1</sub> = d*ε*/d*h* = (*ε*<sub>c</sub> + *P*<sub>c</sub>)/*c*<sub>s,c</sub><sup>2</sup>.
 Carrying *P* as a dependent variable means *ε*(*P*) and *c*<sub>s</sub><sup>2</sup> come from exactly the
@@ -406,7 +411,6 @@ tovSolve/
 ├── scripts/
 │   └── make_figures.py Figures and summary table for this README
 ├── figures/            Light and dark versions of each figure
-├── ode.f90             Shampine–Gordon Adams solver (legacy, not built; LGPL, see License)
 └── LICENSE
 ```
 
@@ -508,9 +512,6 @@ Machine learning with neutron-star observables:
 ## License
 
 tovSolve is released under the [MIT License](LICENSE).
-
-The exception is `ode.f90`, the Shampine–Gordon ODE solver in John Burkardt's Fortran 90 version. It is
-distributed under the GNU LGPL, as stated in the file. The current programs don't use or build it.
 
 ---
 

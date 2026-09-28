@@ -2,28 +2,31 @@
 """
 Make the README figures: neutron-star sequences for every EOS table.
 
-Runs the C enthalpy-formalism solver (tov_h_c.x, bit-identical to the
-Fortran tov_h.x) for each EOS, keeps the stable branch up to M_max, and
-writes light and dark versions of each figure to figures/. Also prints the
-summary table (values at 1.4 Msun) used in the README.
+Runs an enthalpy-formalism solver for each EOS, keeps the stable branch up to
+M_max, and writes light and dark versions of each figure to figures/. Also
+prints the summary table (values at M_max and 1.4 Msun) used in the README.
+The solvers are bit-identical, so both give the same figures:
+    --solver c       c/tov_h_c.x (default; build it with `make -C c`)
+    --solver python  python/tovsolve.py
 
-Usage (from the repository root, after `make -C c`):
-    python scripts/make_figures.py
+Usage (from the repository root):
+    python scripts/make_figures.py [--solver c|python]
+
+The functions are also used by python/tovsolve.ipynb.
 """
 
+import argparse
 import os
 import subprocess
 import sys
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXE = os.path.join(ROOT, "c", "tov_h_c.x")
 OUT = os.path.join(ROOT, "figures")
+SOLVERS = {"c": "c/tov_h_c.x", "python": "python/tovsolve.py"}
 
 # Central number densities (fm^-3): 281 stars per EOS
 RHO_START, RHO_END, NSTEPS = 0.10, 1.50, 281
@@ -55,18 +58,37 @@ THEMES = {
 }
 
 
-def run_eos(fname):
-    """Run tov_h_c.x for one EOS; return dict of arrays (stable branch)."""
+def rows_c(fname):
+    """Output rows (as printed) of c/tov_h_c.x for one EOS."""
+    if not os.path.exists(EXE):
+        sys.exit(f"{EXE} not found: run `make -C c` first")
     res = subprocess.run(
         [EXE, fname, str(RHO_START), str(RHO_END), str(NSTEPS)],
         cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         universal_newlines=True, check=True)
-    rows = []
-    for line in res.stdout.splitlines()[1:]:
+    return res.stdout.splitlines()[1:]
+
+
+def rows_python(fname):
+    """Output rows (formatted as printed) of python/tovsolve.py for one EOS."""
+    sys.path.insert(0, os.path.join(ROOT, "python"))
+    import tovsolve
+    seq = tovsolve.sequence(tovsolve.Eos(os.path.join(ROOT, fname)),
+                            RHO_START, RHO_END, NSTEPS)
+    stars = zip(*(seq[k] for k in tovsolve.Star._fields))
+    return [tovsolve.format_row(s) for s in stars]
+
+
+def stable_branch(rows):
+    """Arrays from printed output rows, stable branch (M >= M_MIN, up to M_max).
+    Both solvers go through the 6-decimal printed values, so they give
+    identical figures and tables."""
+    parsed = []
+    for line in rows:
         if "*" in line:  # f11.6 overflow at the lowest densities
             continue
-        rows.append([float(v) for v in line.split()])
-    a = np.array(rows)
+        parsed.append([float(v) for v in line.split()])
+    a = np.array(parsed)
     d = dict(M=a[:, 0], R=a[:, 1], k2=a[:, 2], lam=a[:, 3], I=a[:, 4],
              beta=a[:, 5], rhoc=a[:, 6])
     d["Lam"] = (2.0 / 3.0) * d["k2"] / d["beta"] ** 5  # dimensionless Lambda
@@ -74,6 +96,12 @@ def run_eos(fname):
     keep = np.arange(len(d["M"])) <= imax
     keep &= d["M"] >= M_MIN
     return {k: v[keep] for k, v in d.items()}
+
+
+def load_all(solver="c"):
+    """Stable-branch data for every EOS: {key: dict of arrays}."""
+    rows = rows_c if solver == "c" else rows_python
+    return {key: stable_branch(rows(fname)) for key, fname, *_ in EOS}
 
 
 def at_mass(d, key, m=1.4):
@@ -147,7 +175,9 @@ def draw_panel(ax, data, group, xkey, ykey, t, mode, logy=False):
     return handles
 
 
-def make_figure(data, spec, mode):
+def make_figure(data, spec, mode, solver="c", save=True):
+    """Draw one figure. save=True writes figures/<name>[_dark].png and returns
+    the path; save=False returns the matplotlib Figure (e.g. for a notebook)."""
     t = THEMES[mode]
     plt.rcParams.update({"font.family": "DejaVu Sans", "mathtext.fontset": "dejavusans"})
     fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.9), sharey=True,
@@ -180,8 +210,10 @@ def make_figure(data, spec, mode):
 
     fig.text(0.075, 0.945, spec["title"], fontsize=15, color=t["ink"],
              fontweight="semibold", ha="left", va="center")
-    fig.text(0.075, 0.885, spec["subtitle"], fontsize=10.5, color=t["ink2"],
-             ha="left", va="center")
+    fig.text(0.075, 0.885, spec["subtitle"].replace("SOLVER", SOLVERS[solver]),
+             fontsize=10.5, color=t["ink2"], ha="left", va="center")
+    if not save:
+        return fig
     suffix = "" if mode == "light" else "_dark"
     path = os.path.join(OUT, f"{spec['name']}{suffix}.png")
     fig.savefig(path, dpi=160, facecolor=t["surface"])
@@ -207,7 +239,7 @@ def gw_bar(ax, t):
             ha="right", va="center", linespacing=1.1, zorder=6)
 
 
-SUB = "Stable branch up to M$_{max}$ (dot), 281 central densities per EOS · tov_h_c.x"
+SUB = "Stable branch up to M$_{max}$ (dot), 281 central densities per EOS · SOLVER"
 FIGS = [
     dict(name="mass_radius", x="R", y="M", xlim=(7.4, 16.0), ylim=(0.2, 2.45),
          xlabel="Radius R (km)", ylabel="Mass M (M$_\\odot$)",
@@ -233,25 +265,37 @@ FIGS = [
 ]
 
 
-def main():
-    if not os.path.exists(EXE):
-        sys.exit(f"{EXE} not found: run `make -C c` first")
+def summary_table(data):
+    """Markdown table: values at M_max and interpolated at 1.4 Msun."""
+    lines = ["| EOS | M_max (M☉) | R at M_max (km) | n_c at M_max (fm⁻³) "
+             "| R_1.4 (km) | k2_1.4 | Λ_1.4 | I_1.4 (10⁴⁵ g cm²) |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for key, _, label, *_ in EOS:
+        d = data[key]
+        lines.append(f"| {label.replace('  ', ' ')} | {d['M'][-1]:.3f} | {d['R'][-1]:.2f} "
+                     f"| {d['rhoc'][-1]:.3f} | {at_mass(d, 'R'):.2f} | {at_mass(d, 'k2'):.4f} "
+                     f"| {at_mass(d, 'Lam'):.0f} | {at_mass(d, 'I'):.3f} |")
+    return "\n".join(lines)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Make the README figures.")
+    ap.add_argument("--solver", choices=sorted(SOLVERS), default="c",
+                    help="enthalpy solver to run (default: %(default)s)")
+    args = ap.parse_args(argv)
+
+    import matplotlib
+    matplotlib.use("Agg")
     os.makedirs(OUT, exist_ok=True)
-    data = {key: run_eos(fname) for key, fname, *_ in EOS}
+    data = load_all(args.solver)
 
     for spec in FIGS:
         for mode in ("light", "dark"):
-            print("wrote", os.path.relpath(make_figure(data, spec, mode), ROOT))
+            path = make_figure(data, spec, mode, solver=args.solver)
+            print("wrote", os.path.relpath(path, ROOT))
 
-    # Table view: values at 1.4 Msun and at M_max
-    print("\n| EOS | M_max (M☉) | R at M_max (km) | n_c at M_max (fm⁻³) "
-          "| R_1.4 (km) | k2_1.4 | Λ_1.4 | I_1.4 (10⁴⁵ g cm²) |")
-    print("|---|---:|---:|---:|---:|---:|---:|---:|")
-    for key, _, label, *_ in EOS:
-        d = data[key]
-        print(f"| {label.replace('  ', ' ')} | {d['M'][-1]:.3f} | {d['R'][-1]:.2f} "
-              f"| {d['rhoc'][-1]:.3f} | {at_mass(d, 'R'):.2f} | {at_mass(d, 'k2'):.4f} "
-              f"| {at_mass(d, 'Lam'):.0f} | {at_mass(d, 'I'):.3f} |")
+    print()
+    print(summary_table(data))
 
 
 if __name__ == "__main__":

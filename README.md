@@ -6,8 +6,9 @@ with the equations for the tidal Love number and the moment of inertia. It retur
 the Love number *k*<sub>2</sub>, the tidal deformability *λ*, the moment of inertia *I*, and the compactness *β*.
 
 The code comes in **two formulations**, radius or pseudo-enthalpy as the independent variable, each in
-**Fortran and C**. All four programs read EOS tables in the input format of the RNS code, and the C and
-Fortran versions give bit-identical results.
+**Fortran and C**. There is also a **Python** version of the enthalpy solver, with a
+[Jupyter notebook](python/tovsolve.ipynb) that reproduces the figures below. All versions read EOS tables
+in the input format of the RNS code, and they give bit-identical results.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/mass_radius_dark.png">
@@ -46,8 +47,10 @@ Fortran versions give bit-identical results.
   The two agree to about 10<sup>−6</sup>.
 - **Adaptive Dormand–Prince 5(4) integrator.** An embedded Runge–Kutta pair whose last stage is reused as
   the first stage of the next step (FSAL), with step-size control.
-- **Fortran and C, bit-identical.** The C code reproduces the Fortran floating-point evaluation order
-  exactly, so both languages return the same numbers down to the last bit.
+- **Fortran, C and Python, bit-identical.** The C and Python code reproduce the Fortran floating-point
+  evaluation order exactly, so all three languages return the same numbers down to the last bit.
+- **Python module and notebook.** `python/tovsolve.py` works both as a command-line program and as a
+  library. It is compiled with Numba when that's installed, which brings it close to C speed.
 - **RNS-compatible input.** The EOS format is the one used by the RNS rotating-star code, so the same
   tables can be used for later rotating-star calculations.
 - **Fast.** A sequence of 100 stars takes about 0.13 s on a single core.
@@ -60,10 +63,13 @@ make -C c       # C:       c/tov_c.x (radius) and c/tov_h_c.x (enthalpy)
 
 ./tov_h.x                                   # MDI x = 0, n_c = 0.09 ... 1.5 fm^-3, 100 stars
 c/tov_h_c.x eos_SLY4.in 0.3 1.2 4           # any EOS, density range and number of stars
+python python/tovsolve.py eos_SLY4.in 0.3 1.2 4    # Python, same arguments and output
 ```
 
-Requirements: `gfortran` and `gcc`, or any Fortran 2008 and C99 compilers. Python and matplotlib are
-needed only to regenerate the figures.
+Requirements:
+- **Fortran and C:** `gfortran` and `gcc`, or any Fortran 2008 and C99 compilers.
+- **Python:** Python 3 with numpy. Numba is optional but recommended; matplotlib is needed for the
+  figures, and Jupyter for the notebook.
 
 ## Programs and usage
 
@@ -73,6 +79,7 @@ needed only to regenerate the figures.
 | `tov_h.x` | Fortran | pseudo-enthalpy *h* | `make` | `libtov.f90`, `libtov_h.f90`, `tov_main_h.f90` |
 | `c/tov_c.x` | C | radius *r* | `make -C c` | `c/tov.c`, `c/tov_main.c` |
 | `c/tov_h_c.x` | C | pseudo-enthalpy *h* | `make -C c` | `c/tov.c`, `c/tov_h.c`, `c/tov_main_h.c` |
+| `python/tovsolve.py` | Python | pseudo-enthalpy *h* | no build step | `python/tovsolve.py` |
 
 Each language has its own Makefile, and `make tov.x`-style targets build a single program. The compilers
 and flags can be changed on the command line, e.g. `make FC=ifx FFLAGS=-O3` or `make -C c CC=clang`.
@@ -95,6 +102,23 @@ c/tov_h_c.x [eos_file] [rho_start] [rho_end] [nsteps]
 ```
 
 `make clean` and `make -C c clean` remove the objects and executables.
+
+**Python program.** Takes the same arguments and prints the same output as `c/tov_h_c.x`
+(`python python/tovsolve.py --help`):
+
+```text
+python python/tovsolve.py [eos_file] [rho_start] [rho_end] [nsteps]
+```
+
+With Numba installed, the solver is compiled on first use and cached (in `python/__pycache__`). The
+default 100-star run then takes about 1 s, most of it Python and Numba start-up; the first run takes a
+few seconds longer. Without Numba it runs as plain Python at about 0.1 s per star. Set
+`TOVSOLVE_NO_NUMBA=1` to force the plain-Python path.
+
+**Notebook.** [`python/tovsolve.ipynb`](python/tovsolve.ipynb) walks through a single star and a
+sequence, computes all eight EOS tables (2,248 stars in about 4 s with Numba), and draws every figure in
+this README. Its last cell checks the result against the C solver. It is saved with its outputs, so it
+can be read on GitHub without running it.
 
 ## Output
 
@@ -132,7 +156,8 @@ The dimensionless tidal deformability used in gravitational-wave work is
 The figures show the stable branch (up to the maximum mass, marked by a dot) for all eight tables in the
 repository. Each figure has two panels: the **MDI family** in a blue ramp ordered by *x*, and the four
 **other EOSs** in distinct colours. Each panel also shows the other group as gray context lines.
-[`scripts/make_figures.py`](scripts/make_figures.py) generates them with `c/tov_h_c.x`.
+[`scripts/make_figures.py`](scripts/make_figures.py) generates them with `c/tov_h_c.x`, and the
+[notebook](python/tovsolve.ipynb) generates the same figures with the Python solver.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/love_number_dark.png">
@@ -176,9 +201,9 @@ The figures mark two observational constraints:
 To regenerate the figures and this table:
 
 ```bash
-make -C c
 module load python        # or any Python 3 with numpy and matplotlib
-python scripts/make_figures.py
+make -C c && python scripts/make_figures.py      # with the C solver
+python scripts/make_figures.py --solver python   # with the Python solver (same result)
 ```
 
 ## Physics
@@ -310,8 +335,11 @@ same 630 stars:
 The *k*<sub>2</sub> and λ figures are limited by the 6-decimal output. The radius formalism's *R* error
 comes from its last step overshooting *P*<sub>term</sub>; the enthalpy formalism ends exactly on the surface.
 
-**Fortran vs C.** `c/tov_c.x` and `c/tov_h_c.x` reproduce `tov.x` and `tov_h.x` **bit for bit**: all 7 output
-quantities for every star of every EOS agree at full double precision.
+**Fortran vs C vs Python.** `c/tov_c.x` and `c/tov_h_c.x` reproduce `tov.x` and `tov_h.x` **bit for bit**,
+and `python/tovsolve.py` reproduces `tov_h.x` bit for bit, both with Numba and as plain Python. All 7 output
+quantities for every star of every EOS agree at full double precision. For this, the Python code takes
+logarithms with `math.log10`, the C library function: NumPy's vectorized `log10` can differ in the last bit
+on machines with AVX-512.
 
 **Code checks.**
 - The Fortran compiles with `-Wall -Wextra -std=f2008 -pedantic`. The only warnings are deliberate exact
@@ -389,6 +417,17 @@ if (tov_load_eos("eos_SLY4.in", &eos) == 0) {
 
 Compile with `-Ic` and link with `c/tov.o`, plus `c/tov_h.o` for the enthalpy solver, and `-lm`.
 
+**Python.** Add `python/` to the path. The central density is in fm<sup>−3</sup>:
+
+```python
+import tovsolve
+
+eos = tovsolve.Eos("eos_SLY4.in")
+star = tovsolve.solve_tov_h(eos, 0.5)            # Star(mass, radius, k2, lam, I, beta, rhoc)
+seq = tovsolve.sequence(eos, 0.1, 1.5, 281)      # dict of numpy arrays, plus "Lambda"
+print(f"M = {star.mass:.4f} Msun, R = {star.radius:.3f} km, k2 = {star.k2:.4f}")
+```
+
 ## Repository layout
 
 ```text
@@ -407,9 +446,12 @@ tovSolve/
 │   ├── tov_main.c      driver for tov_c.x (command-line arguments)
 │   ├── tov_main_h.c    driver for tov_h_c.x
 │   └── Makefile        C build
+├── python/             Python version of the enthalpy solver (bit-identical)
+│   ├── tovsolve.py     module and command-line program (Numba-accelerated if available)
+│   └── tovsolve.ipynb  notebook: examples, all EOS tables, README figures
 ├── eos_*.in            EOS tables (RNS format)
 ├── scripts/
-│   └── make_figures.py Figures and summary table for this README
+│   └── make_figures.py Figures and summary table (--solver c|python)
 ├── figures/            Light and dark versions of each figure
 └── LICENSE
 ```
